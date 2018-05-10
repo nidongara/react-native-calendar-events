@@ -1,6 +1,6 @@
 {
   "name": "react-native-calendar-events",
-  "version": "1.5.0",
+  "version": "1.3.6",
   "author": "Will McMahan",
   "license": "MIT",
   "scripts": {
@@ -23,8 +23,5 @@
     "eventkit",
     "reminders",
     "calendar-events"
-  ],
-  "peerDependencies": {
-    "react-native": ">=0.40.0"
-  }
+  ]
 }
