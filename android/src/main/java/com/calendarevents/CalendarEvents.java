@@ -26,7 +26,6 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
-import com.facebook.react.bridge.Dynamic;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -141,79 +140,6 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         return result;
     }
 
-    //region Event Accessors
-    private WritableNativeArray findEvents(Dynamic startDate, Dynamic endDate, ReadableArray calendars) {
-        String dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-        Calendar eStartDate = Calendar.getInstance();
-        Calendar eEndDate = Calendar.getInstance();
-
-        try {
-            if (startDate.getType() == ReadableType.String) {
-                eStartDate.setTime(sdf.parse(startDate.asString()));
-            } else if (startDate.getType() == ReadableType.Number) {
-                eStartDate.setTimeInMillis((long)startDate.asDouble());
-            }
-
-            if (startDate.getType() == ReadableType.String) {
-                eEndDate.setTime(sdf.parse(endDate.asString()));
-            } else if (startDate.getType() == ReadableType.Number) {
-                eEndDate.setTimeInMillis((long)endDate.asDouble());
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        Cursor cursor;
-        ContentResolver cr = reactContext.getContentResolver();
-
-        Uri.Builder uriBuilder = CalendarContract.Instances.CONTENT_URI.buildUpon();
-        ContentUris.appendId(uriBuilder, eStartDate.getTimeInMillis());
-        ContentUris.appendId(uriBuilder, eEndDate.getTimeInMillis());
-
-        Uri uri = uriBuilder.build();
-
-        String selection = "((" + CalendarContract.Instances.BEGIN + " >= " + eStartDate.getTimeInMillis() + ") " +
-                "AND (" + CalendarContract.Instances.END + " <= " + eEndDate.getTimeInMillis() + ") " +
-                "AND (" + CalendarContract.Instances.VISIBLE + " = 1) " +
-                "AND (" + CalendarContract.Instances.STATUS + " IS NOT " + CalendarContract.Events.STATUS_CANCELED + ") ";
-
-        if (calendars.size() > 0) {
-            String calendarQuery = "AND (";
-            for (int i = 0; i < calendars.size(); i++) {
-                calendarQuery += CalendarContract.Instances.CALENDAR_ID + " = " + calendars.getString(i);
-                if (i != calendars.size() - 1) {
-                    calendarQuery += " OR ";
-                }
-            }
-            calendarQuery += ")";
-            selection += calendarQuery;
-        }
-
-        selection += ")";
-
-        cursor = cr.query(uri, new String[]{
-                CalendarContract.Instances.EVENT_ID,
-                CalendarContract.Instances.TITLE,
-                CalendarContract.Instances.DESCRIPTION,
-                CalendarContract.Instances.BEGIN,
-                CalendarContract.Instances.END,
-                CalendarContract.Instances.ALL_DAY,
-                CalendarContract.Instances.EVENT_LOCATION,
-                CalendarContract.Instances.RRULE,
-                CalendarContract.Instances.CALENDAR_ID,
-                CalendarContract.Instances.AVAILABILITY,
-                CalendarContract.Instances.HAS_ALARM,
-                CalendarContract.Instances.ORIGINAL_ID,
-                CalendarContract.Instances.EVENT_ID,
-                CalendarContract.Instances.DURATION,
-                CalendarContract.Instances.ORIGINAL_SYNC_ID
-        }, selection, null, null);
-
-        return serializeEvents(cursor);
-    }
 
     private WritableNativeMap findEventById(String eventID) {
 
@@ -998,29 +924,6 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         } else {
             promise.reject("add event error", "you don't have permissions to add an event to the users calendar");
         }
-    }
-
-    @ReactMethod
-    public void findAllEvents(final Dynamic startDate, final Dynamic endDate, final ReadableArray calendars, final Promise promise) {
-
-        if (this.haveCalendarReadWritePermissions()) {
-            try {
-                Thread thread = new Thread(new Runnable(){
-                    @Override
-                    public void run() {
-                        WritableNativeArray results = findEvents(startDate, endDate, calendars);
-                        promise.resolve(results);
-                    }
-                });
-                thread.start();
-
-            } catch (Exception e) {
-                promise.reject("find event error", e.getMessage());
-            }
-        } else {
-            promise.reject("find event error", "you don't have permissions to read an event from the users calendar");
-        }
-
     }
 
     @ReactMethod
